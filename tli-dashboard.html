@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thai Life Insurance - Ultimate Offline News Dashboard</title>
+    <!-- Tailwind CSS (ฝังมาในตัวสคริปต์เพื่อให้หน้าตาทำงานได้ทันที) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Sarabun & Prompt) -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f8fafc;
+        }
+        h1, h2, h3, .font-title {
+            font-family: 'Prompt', sans-serif;
+        }
+        select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23475569'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpolyline%20points='6%209%2012%2015%2018%209'%3E%3C/polyline%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1em;
+            padding-right: 1.5rem;
+            appearance: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Header / Navigation -->
+    <header class="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white shadow-lg">
+        <div class="container mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 backdrop-blur-md p-3 rounded-xl border border-white/20 text-white">
+                    <i class="fa-solid fa-square-poll-horizontal text-2xl text-blue-400"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-wide">Thai Life Insurance News Portal</h1>
+                    <p class="text-xs text-blue-200">แดชบอร์ดสรุปวิเคราะห์ชื่อเสียงแบรนด์ ค้นหาข้อมูลจากมติชน, ไทยรัฐ และประชาชาติธุรกิจ</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs md:text-sm text-indigo-100 bg-white/10 px-4 py-2 rounded-full border border-white/10">
+                <i class="fa-solid fa-circle text-emerald-400 text-[10px] animate-pulse"></i>
+                <span id="connectionStatus">โหมดออฟไลน์ใช้งานได้ 100%</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        
+        <!-- Filter Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 transition-all hover:shadow-md">
+            <div class="border-b border-slate-100 pb-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800 font-title flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days text-blue-600"></i> ตัวกรองเลือกช่วงเวลาหลัก
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">ระบุช่วงวันที่ต้องการคัดกรองข้อมูลในระบบ</p>
+                </div>
+                <!-- Presets -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="setPreset('2026-01-01', '2026-12-31')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                        ทั้งหมดปี 2026
+                    </button>
+                    <button onclick="setPreset('2026-09-01', '2026-09-30')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                        กันยายน 2569
+                    </button>
+                    <button onclick="setPreset('2026-10-01', '2026-10-31')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                        ตุลาคม 2569
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Date Range Form -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label for="startDate" class="block text-xs font-semibold text-slate-600 mb-1.5">
+                        <i class="fa-regular fa-calendar text-blue-500 mr-1"></i> ตั้งแต่วันที่:
+                    </label>
+                    <input type="date" id="startDate" min="2026-01-01" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition">
+                </div>
+
+                <div>
+                    <label for="endDate" class="block text-xs font-semibold text-slate-600 mb-1.5">
+                        <i class="fa-regular fa-calendar text-blue-500 mr-1"></i> ถึงวันที่:
+                    </label>
+                    <input type="date" id="endDate" min="2026-01-01" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition">
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="applyDateFilter()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm shadow-blue-200">
+                        <i class="fa-solid fa-filter text-xs"></i> ตกลง
+                    </button>
+                    <button onclick="resetDateFilter()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2 px-4 rounded-xl text-sm transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-rotate-left text-xs"></i> รีเซ็ต
+                    </button>
+                </div>
+
+                <div class="text-right sm:text-left md:text-right">
+                    <span id="filterStatus" class="inline-block text-xs font-medium text-slate-500 bg-slate-100 px-3 py-2 rounded-lg">
+                        แสดงข้อมูล: ทั้งหมดตั้งแต่ 01/01/2026
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Card 1: Total -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">จำนวนข่าวในตารางขณะนี้</p>
+                    <h3 id="total-news" class="text-3xl font-bold text-slate-800 mt-1">11 ข่าว</h3>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-xl text-blue-600">
+                    <i class="fa-solid fa-newspaper text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Positive News -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">ข่าวด้านบวก (ดี)</p>
+                    <h3 id="good-news" class="text-3xl font-bold text-emerald-600 mt-1">11 ข่าว</h3>
+                </div>
+                <div class="bg-emerald-50 p-4 rounded-xl text-emerald-600">
+                    <i class="fa-solid fa-arrow-trend-up text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Neutral / Negative -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">ข่าวทั่วไป / เป็นกลาง</p>
+                    <h3 id="neutral-news" class="text-3xl font-bold text-slate-500 mt-1">0 ข่าว</h3>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl text-slate-500">
+                    <i class="fa-solid fa-circle-minus text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- News Table Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 bg-white border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 font-title flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-blue-600"></i> ตารางสรุปข่าวสารและผลวิเคราะห์ (รวมทุกเว็บไซต์)
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">คุณสามารถอัปโหลดข้อมูลจากไฟล์ CSV ภายนอกเพื่อกรองและแสดงผลในตารางได้ออฟไลน์</p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                    <!-- Keyword Search Box -->
+                    <div class="relative w-full sm:w-64">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                        </span>
+                        <input type="text" id="searchInput" onkeyup="multiFilterTable()" placeholder="พิมพ์คำสำคัญเพื่อค้นหา..." class="w-full pl-10 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition">
+                    </div>
+
+                    <!-- Upload Button (Hidden Input) -->
+                    <label class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition duration-150 shadow-sm cursor-pointer">
+                        <i class="fa-solid fa-file-import"></i> อัปโหลดไฟล์ข่าว (CSV)
+                        <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileUpload(event)" class="hidden">
+                    </label>
+
+                    <!-- Export Button -->
+                    <button onclick="exportToCSV()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition duration-150 shadow-sm shadow-emerald-100">
+                        <i class="fa-solid fa-file-excel"></i> ส่งออกตารางนี้ (CSV)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="newsTable">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider font-title border-b border-slate-200">
+                            <th class="py-4 px-6 text-center w-14 border-r border-slate-100">#</th>
+                            
+                            <!-- Column 1: Date Dropdown Filter -->
+                            <th class="py-4 px-6 border-r border-slate-100">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-slate-700 font-bold">วันที่เผยแพร่</span>
+                                    <select id="colFilterDate" onchange="multiFilterTable()" class="mt-1 py-1 px-2 border border-slate-300 rounded text-slate-600 text-[11px] font-normal w-28 bg-white cursor-pointer hover:border-blue-500 transition-colors">
+                                        <option value="all">ทั้งหมด (ทุกวัน)</option>
+                                        <option value="10">ต.ค. 2569</option>
+                                        <option value="09">ก.ย. 2569</option>
+                                        <option value="08">ส.ค. 2569</option>
+                                        <option value="07">ก.ค. 2569</option>
+                                        <option value="06">มิ.ย. 2569</option>
+                                        <option value="05">พ.ค. 2569</option>
+                                        <option value="04">เม.ย. 2569</option>
+                                    </select>
+                                </div>
+                            </th>
+                            
+                            <!-- Column 2: Web Dropdown Filter -->
+                            <th class="py-4 px-6 border-r border-slate-100">
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-slate-700 font-bold">เว็บไซต์ต้นทาง</span>
+                                    <select id="colFilterSite" onchange="multiFilterTable()" class="mt-1 py-1 px-2 border border-slate-300 rounded text-slate-600 text-[11px] font-normal w-40 bg-white cursor-pointer hover:border-blue-500 transition-colors">
+                                        <option value="all">ทั้งหมด (ทุกเว็บ)</option>
+                                        <option value="thairath.co.th">Thairath.co.th</option>
+                                        <option value="matichon.co.th">Matichon.co.th</option>
+                                        <option value="prachachat.net">Prachachat.net</option>
+                                        <option value="hfocus.org">Hfocus.org</option>
+                                        <option value="thailife.com">Thailife.com</option>
+                                        <option value="moneyandbanking.co.th">Moneyandbanking</option>
+                                        <option value="today.line.me">Today.line.me</option>
+                                        <option value="mitihoon.com">Mitihoon.com</option>
+                                        <option value="sharetotrade">Share2trade</option>
+                                    </select>
+                                </div>
+                            </th>
+                            
+                            <th class="py-4 px-6 border-r border-slate-100 text-slate-700 font-bold">หัวข้อข่าวสาร</th>
+                            <th class="py-4 px-6 border-r border-slate-100 text-slate-700 font-bold">ลิงก์ข่าว</th>
+                            
+                            <!-- Column 5: Sentiment Dropdown Filter -->
+                            <th class="py-4 px-6 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-slate-700 font-bold">ผลการวิเคราะห์</span>
+                                    <select id="colFilterSentiment" onchange="multiFilterTable()" class="mt-1 py-1 px-2 border border-slate-300 rounded text-slate-600 text-[11px] font-normal w-28 bg-white cursor-pointer hover:border-blue-500 transition-colors">
+                                        <option value="all">ทั้งหมด (ทุกสถานะ)</option>
+                                        <option value="ข่าวดี">ข่าวดี</option>
+                                        <option value="ทั่วไป">ทั่วไป</option>
+                                    </select>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="newsTableBody" class="divide-y divide-slate-100 text-slate-700 text-sm">
+                        <!-- Default Row 1 -->
+                        <tr class="hover:bg-blue-50/40 transition duration-150 news-row" data-date="2026-09-01" data-site="thairath.co.th" data-sentiment="ข่าวดี">
+                            <td class="py-4 px-6 text-center font-semibold text-slate-400 row-index">1</td>
+                            <td class="py-4 px-6 whitespace-nowrap">01/09/2026</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-site">Thairath.co.th</td>
+                            <td class="py-4 px-6 font-medium text-slate-900 max-w-sm news-title">ไทยประกันชีวิต ตอกย้ำความสำเร็จกวาด 2 รางวัลระดับภูมิภาคจากเวที Insurance Asia Awards 2026</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-link-col">
+                                <a href="https://www.thairath.co.th/" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs gap-1.5 transition news-link-url">ดูลิงก์ข่าว <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                            </td>
+                            <td class="py-4 px-6 text-center whitespace-nowrap news-sentiment">
+                                <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">ข่าวดี</span>
+                            </td>
+                        </tr>
+                        <!-- Default Row 2 -->
+                        <tr class="hover:bg-blue-50/40 transition duration-150 news-row" data-date="2026-10-14" data-site="matichon.co.th" data-sentiment="ข่าวดี">
+                            <td class="py-4 px-6 text-center font-semibold text-slate-400 row-index">2</td>
+                            <td class="py-4 px-6 whitespace-nowrap">14/10/2026</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-site">Matichon.co.th</td>
+                            <td class="py-4 px-6 font-medium text-slate-900 max-w-sm news-title">ไทยประกันชีวิต ร่วมสนับสนุน APCD เพิ่มการสร้างอาชีพให้แก่บุคคลออทิสติกและกลุ่มเปราะบาง</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-link-col">
+                                <a href="https://www.matichon.co.th/economy/news_4502123" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs gap-1.5 transition news-link-url">ดูลิงก์ข่าว <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                            </td>
+                            <td class="py-4 px-6 text-center whitespace-nowrap news-sentiment">
+                                <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">ข่าวดี</span>
+                            </td>
+                        </tr>
+                        <!-- Default Row 3 -->
+                        <tr class="hover:bg-blue-50/40 transition duration-150 news-row" data-date="2026-08-16" data-site="prachachat.net" data-sentiment="ข่าวดี">
+                            <td class="py-4 px-6 text-center font-semibold text-slate-400 row-index">3</td>
+                            <td class="py-4 px-6 whitespace-nowrap">16/08/2026</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-site">Prachachat.net</td>
+                            <td class="py-4 px-6 font-medium text-slate-900 max-w-sm news-title">TLI เปิดผลการดำเนินงานครึ่งปีแรก 2569 สัดส่วนกำไรมั่นคง ยอดขายช่องทางดิจิทัลเติบโตตามเป้า</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-link-col">
+                                <a href="https://www.prachachat.net/finance/news-1632145" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs gap-1.5 transition news-link-url">ดูลิงก์ข่าว <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                            </td>
+                            <td class="py-4 px-6 text-center whitespace-nowrap news-sentiment">
+                                <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">ข่าวดี</span>
+                            </td>
+                        </tr>
+                        <!-- Default Row 4 -->
+                        <tr class="hover:bg-blue-50/40 transition duration-150 news-row" data-date="2026-09-03" data-site="hfocus.org" data-sentiment="ข่าวดี">
+                            <td class="py-4 px-6 text-center font-semibold text-slate-400 row-index">4</td>
+                            <td class="py-4 px-6 whitespace-nowrap">03/09/2026</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-site">Hfocus.org</td>
+                            <td class="py-4 px-6 font-medium text-slate-900 max-w-sm news-title">ไทยประกันชีวิต ผนึก เครือข่าย รพ.กว่า 800 แห่ง ดัน “iClaim” ยกระดับเคลมสุขภาพดิจิทัล</td>
+                            <td class="py-4 px-6 whitespace-nowrap news-link-col">
+                                <a href="https://www.hfocus.org/content/2026/09/39371" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs gap-1.5 transition news-link-url">ดูลิงก์ข่าว <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                            </td>
+                            <td class="py-4 px-6 text-center whitespace-nowrap news-sentiment">
+                                <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">ข่าวดี</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="noDataMessage" class="hidden text-center py-16 bg-white">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-regular fa-folder-open"></i>
+                </div>
+                <h4 class="text-base font-bold text-slate-700 font-title">ไม่พบข่าวสารที่ตรงตามเงื่อนไข</h4>
+                <p class="text-xs text-slate-500 mt-1">โปรดลองอัปโหลดไฟล์ใหม่ หรือกดปุ่ม "รีเซ็ต" เพื่อดูข้อมูลชุดเริ่มต้น</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs border-t border-slate-800">
+        <div class="container mx-auto px-4">
+            <p>© 2026 Thai Life Insurance Dashboard. แดชบอร์ดวิเคราะห์ข่าวสารแบบออฟไลน์ 100%</p>
+        </div>
+    </footer>
+
+    <!-- Filter & Logic Scripts -->
+    <script>
+        // Default initial dataset in memory to support offline rebuild/reset
+        const defaultData = [
+            { id: 1, date: "01/09/2026", dbDate: "2026-09-01", site: "thairath.co.th", title: "ไทยประกันชีวิต ตอกย้ำความสำเร็จกวาด 2 รางวัลระดับภูมิภาคจากเวที Insurance Asia Awards 2026", link: "https://www.thairath.co.th/", sentiment: "ข่าวดี" },
+            { id: 2, date: "14/10/2026", dbDate: "2026-10-14", site: "matichon.co.th", title: "ไทยประกันชีวิต ร่วมสนับสนุน APCD เพิ่มการสร้างอาชีพให้แก่บุคคลออทิสติกและกลุ่มเปราะบาง", link: "https://www.matichon.co.th/economy/news_4502123", sentiment: "ข่าวดี" },
+            { id: 3, date: "16/08/2026", dbDate: "2026-08-16", site: "prachachat.net", title: "TLI เปิดผลการดำเนินงานครึ่งปีแรก 2569 สัดส่วนกำไรมั่นคง ยอดขายช่องทางดิจิทัลเติบโตตามเป้า", link: "https://www.prachachat.net/finance/news-1632145", sentiment: "ข่าวดี" },
+            { id: 4, date: "03/09/2026", dbDate: "2026-09-03", site: "hfocus.org", title: "ไทยประกันชีวิต ผนึก เครือข่าย รพ.กว่า 800 แห่ง ดัน “iClaim” ยกระดับเคลมสุขภาพดิจิทัล", link: "https://www.hfocus.org/content/2026/09/39371", sentiment: "ข่าวดี" }
+        ];
+
+        let currentDataset = [...defaultData];
+
+        function renderTable(data) {
+            const tbody = document.getElementById('newsTableBody');
+            tbody.innerHTML = '';
+            
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50/40 transition duration-150 news-row";
+                tr.setAttribute('data-date', item.dbDate);
+                tr.setAttribute('data-site', item.site.toLowerCase());
+                tr.setAttribute('data-sentiment', item.sentiment);
+                
+                tr.innerHTML = `
+                    <td class="py-4 px-6 text-center font-semibold text-slate-400 row-index">${index + 1}</td>
+                    <td class="py-4 px-6 whitespace-nowrap">
+                        <span class="bg-blue-50 text-blue-700 font-medium text-xs px-2.5 py-1 rounded-md border border-blue-100">
+                            ${item.date}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 whitespace-nowrap news-site">
+                        <span class="inline-flex items-center gap-1.5 text-slate-800 font-medium">
+                            <i class="fa-solid fa-earth-asia text-blue-500 text-xs"></i> ${item.site}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 font-medium text-slate-900 max-w-sm news-title">${item.title}</td>
+                    <td class="py-4 px-6 whitespace-nowrap news-link-col">
+                        <a href="${item.link}" target="_blank" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-xs gap-1.5 transition news-link-url">
+                            ดูลิงก์ข่าว <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                    </td>
+                    <td class="py-4 px-6 text-center whitespace-nowrap news-sentiment">
+                        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">
+                            ${item.sentiment}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            multiFilterTable();
+        }
+
+        // Handle uploaded CSV file
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file, "UTF-8");
+        }
+
+        // Simplistic CSV Parser supporting Thai characters
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const newDataset = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // Matches values inside double quotes or normal text
+                const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                const cleanRow = matches.map(val => val.replace(/^"|"$/g, '').trim());
+                
+                if (cleanRow.length >= 6) {
+                    const dateParts = cleanRow[1].split('/'); // DD/MM/YYYY
+                    let dbFormattedDate = cleanRow[1];
+                    if (dateParts.length === 3) {
+                        dbFormattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`; // YYYY-MM-DD
+                    }
+
+                    newDataset.push({
+                        id: parseInt(cleanRow[0]) || i,
+                        date: cleanRow[1],
+                        dbDate: dbFormattedDate,
+                        site: cleanRow[2],
+                        title: cleanRow[3],
+                        link: cleanRow[4],
+                        sentiment: cleanRow[5]
+                    });
+                }
+            }
+
+            if (newDataset.length > 0) {
+                currentDataset = newDataset;
+                renderTable(currentDataset);
+                alert(`อัปโหลดข่าวจำนวน ${newDataset.length} แถว สำเร็จเรียบร้อยแล้ว!`);
+            } else {
+                alert('โครงสร้างไฟล์ไม่ถูกต้อง หรือไม่พบข้อมูลในไฟล์ CSV ที่นำเข้า');
+            }
+        }
+
+        function setPreset(start, end) {
+            document.getElementById('startDate').value = start;
+            document.getElementById('endDate').value = end;
+            applyDateFilter();
+        }
+
+        function applyDateFilter() {
+            multiFilterTable();
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDate').value = "";
+            document.getElementById('endDate').value = "";
+            document.getElementById('searchInput').value = "";
+            document.getElementById('colFilterDate').value = "all";
+            document.getElementById('colFilterSite').value = "all";
+            document.getElementById('colFilterSentiment').value = "all";
+            document.getElementById('filterStatus').innerText = "แสดงข้อมูล: ทั้งหมดตั้งแต่ 01/01/2026";
+            
+            currentDataset = [...defaultData];
+            renderTable(currentDataset);
+        }
+
+        // Consolidated Filters for Search input, date picked and dropdown menus
+        function multiFilterTable() {
+            const startDateVal = document.getElementById('startDate').value;
+            const endDateVal = document.getElementById('endDate').value;
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
+            
+            const colDateVal = document.getElementById('colFilterDate').value; 
+            const colSiteVal = document.getElementById('colFilterSite').value;
+            const colSentimentVal = document.getElementById('colFilterSentiment').value;
+
+            const rows = document.querySelectorAll('.news-row');
+            let visibleCount = 0;
+            let goodCount = 0;
+            let neutralCount = 0;
+
+            rows.forEach(row => {
+                const rowDate = row.getAttribute('data-date'); 
+                const rowSite = row.getAttribute('data-site');
+                const rowSentiment = row.getAttribute('data-sentiment');
+                const rowText = row.innerText.toLowerCase();
+
+                let isVisible = true;
+
+                if (startDateVal && rowDate < startDateVal) isVisible = false;
+                if (endDateVal && rowDate > endDateVal) isVisible = false;
+                if (searchKeyword && !rowText.includes(searchKeyword)) isVisible = false;
+
+                if (colDateVal !== "all") {
+                    const [year, month, day] = rowDate.split('-');
+                    if (month !== colDateVal) isVisible = false;
+                }
+
+                if (colSiteVal !== "all" && rowSite !== colSiteVal) isVisible = false;
+                if (colSentimentVal !== "all" && rowSentiment !== colSentimentVal) isVisible = false;
+
+                if (isVisible) {
+                    row.style.display = "";
+                    visibleCount++;
+                    if (rowSentiment === "ข่าวดี") {
+                        goodCount++;
+                    } else {
+                        neutralCount++;
+                    }
+                } else {
+                    row.style.display = "none";
+                }
+            });
+
+            document.getElementById('total-news').innerText = `${visibleCount} ข่าว`;
+            document.getElementById('good-news').innerText = `${goodCount} ข่าว`;
+            document.getElementById('neutral-news').innerText = `${neutralCount} ข่าว`;
+
+            const noData = document.getElementById('noDataMessage');
+            const table = document.getElementById('newsTable');
+            if (visibleCount === 0) {
+                noData.classList.remove('hidden');
+                table.classList.add('hidden');
+            } else {
+                noData.classList.add('hidden');
+                table.classList.remove('hidden');
+            }
+        }
+
+        // FIXED 100% Export Function
+        function exportToCSV() {
+            const rows = document.querySelectorAll('.news-row');
+            const csvData = [];
+            
+            // CSV Header
+            csvData.push(['ลำดับ', 'วันที่เผยแพร่', 'เว็บไซต์หลัก', 'หัวข้อข่าวสาร', 'ลิงก์ข่าวต้นทาง', 'ผลวิเคราะห์อารมณ์ข่าว'].join(','));
+
+            let count = 0;
+            rows.forEach(row => {
+                if (row.style.display !== 'none') {
+                    count++;
+                    const cells = row.getElementsByTagName('td');
+                    
+                    const index = count;
+                    const date = cells[1].innerText.trim();
+                    const site = cells[2].innerText.trim();
+                    
+                    let title = cells[3].innerText.trim();
+                    title = `"${title.replace(/"/g, '""')}"`; // Escaping double quotes inside csv string
+
+                    const linkUrl = cells[4].querySelector('a').getAttribute('href');
+                    const sentiment = cells[5].innerText.trim();
+
+                    csvData.push([index, date, site, title, linkUrl, sentiment].join(','));
+                }
+            });
+
+            if (count === 0) {
+                alert('ไม่มีข้อมูลในตารางที่จะส่งออกในขณะนี้');
+                return;
+            }
+
+            const csvString = csvData.join('\n');
+            const today = new Date().toISOString().slice(0, 10);
+            const filename = `thailife_export_${today}.csv`;
+
+            // Perfect Thai encoding with UTF-8 BOM
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvString], { type: 'text/csv;charset=utf-8;' });
+            
+            const link = document.createElement("a");
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // Initialize table
+        renderTable(currentDataset);
+    </script>
+</body>
+</html>
