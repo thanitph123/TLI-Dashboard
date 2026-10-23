@@ -1,0 +1,918 @@
+<!--gemini thanitph@gmail.com
+https://share.gemini.google/I4m63hdrkUw8
+google sheet https://docs.google.com/spreadsheets/d/1VQSmcIgeEqw95m22S3zcJIYFl24ODxROeibK9Zocdz8/edit?usp=sharing -->
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ไทยประกันชีวิต - News Intelligence Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        thailife: {
+                            navy: '#002B49',
+                            blue: '#005691',
+                            cyan: '#00A3E0',
+                            light: '#F0F4F8',
+                            gold: '#D4AF37'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #F8FAFC;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .spin-anim {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-thailife-navy text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-4">
+            <!-- Brand & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-thailife-blue to-thailife-cyan flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-newspaper text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        ไทยประกันชีวิต <span class="text-xs font-normal bg-thailife-cyan/20 text-thailife-cyan px-2 py-0.5 rounded-full border border-thailife-cyan/30">News Intelligence</span>
+                    </h1>
+                    <p class="text-xs text-slate-300">ระบบสรุปและวิเคราะห์ข่าวสารองค์กรอัตโนมัติ</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons & Sheet Status -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Source Status Badge -->
+                <div class="hidden md:flex items-center gap-2 bg-slate-800/80 text-slate-300 text-xs px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span id="statusIndicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="sourceStatusText">กำลังเชื่อมต่อ Google Sheet...</span>
+                </div>
+
+                <!-- Refresh Button -->
+                <button id="refreshBtn" onclick="fetchSheetData()" class="bg-thailife-blue hover:bg-blue-600 active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm border border-blue-400/30">
+                    <i id="refreshIcon" class="fa-solid fa-rotate"></i>
+                    <span>รีเฟรชข้อมูล</span>
+                </button>
+
+                <!-- Change Sheet URL Modal Trigger -->
+                <button onclick="openSheetModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium transition border border-slate-700" title="ตั้งค่าลิงก์ Google Sheet">
+                    <i class="fa-solid fa-file-spreadsheet text-emerald-400"></i>
+                </button>
+
+                <!-- Upload File Button -->
+                <button onclick="openUploadModal()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-upload"></i>
+                    <span class="hidden sm:inline">อัปโหลดไฟล์</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full space-y-6">
+
+        <!-- Banner Alert / Source Info -->
+        <div class="bg-blue-50/80 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-sm text-blue-900">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-database text-thailife-blue text-lg"></i>
+                <div>
+                    <span class="font-semibold">แหล่งข้อมูลหลัก:</span> 
+                    <span class="text-slate-600 ml-1">Google Sheets</span>
+                    <span id="lastUpdated" class="text-xs text-slate-500 block sm:inline sm:ml-2">(อัปเดตล่าสุด: กำลังโหลด...)</span>
+                </div>
+            </div>
+            <a href="https://docs.google.com/spreadsheets/d/1VQSmcIgeEqw95m22S3zcJIYFl24ODxROeibK9Zocdz8/edit?usp=sharing" target="_blank" class="text-xs font-medium text-thailife-blue hover:underline flex items-center gap-1">
+                <span>เปิดดู Google Sheet ต้นทาง</span>
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                
+                <!-- Quick Date Ranges -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">ช่วงเวลา:</span>
+                    <button onclick="setDateRange('all')" class="range-btn active bg-thailife-navy text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">ทั้งหมด</button>
+                    <button onclick="setDateRange('today')" class="range-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition">วันนี้</button>
+                    <button onclick="setDateRange('7days')" class="range-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition">7 วันล่าสุด</button>
+                    <button onclick="setDateRange('30days')" class="range-btn bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg font-medium transition">30 วันล่าสุด</button>
+                </div>
+
+                <!-- Custom Date Inputs & Sentiment Filters -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Date Pickers -->
+                    <div class="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-xs">
+                        <input type="date" id="startDate" onchange="applyFilters()" class="bg-transparent text-slate-700 focus:outline-none px-1">
+                        <span class="text-slate-400">ถึง</span>
+                        <input type="date" id="endDate" onchange="applyFilters()" class="bg-transparent text-slate-700 focus:outline-none px-1">
+                    </div>
+
+                    <!-- Sentiment Filter -->
+                    <select id="sentimentFilter" onchange="applyFilters()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-thailife-cyan">
+                        <option value="all">มุมมองข่าว: ทั้งหมด</option>
+                        <option value="good">ข่าวดี (Positive)</option>
+                        <option value="bad">ข่าวไม่ดี (Negative)</option>
+                        <option value="neutral">ข่าวทั่วไป (Neutral)</option>
+                    </select>
+
+                    <!-- Search Input -->
+                    <div class="relative flex-grow sm:flex-grow-0">
+                        <input type="text" id="searchInput" oninput="applyFilters()" placeholder="ค้นหาหัวข้อข่าว..." class="w-full sm:w-48 bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-thailife-cyan">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- KPI Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total News Card -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-thailife-blue shadow-sm hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">จำนวนข่าวทั้งหมด</p>
+                        <h3 id="kpiTotal" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-thailife-blue flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-newspaper"></i>
+                    </div>
+                </div>
+                <p id="kpiTotalSub" class="text-xs text-slate-400 mt-2">ข่าวที่ตรวจพบในระบบ</p>
+            </div>
+
+            <!-- Positive News Card -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">ข่าวดี (Positive)</p>
+                        <h3 id="kpiGood" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-face-smile"></i>
+                    </div>
+                </div>
+                <p id="kpiGoodPercent" class="text-xs text-emerald-600 font-medium mt-2">0% จากทั้งหมด</p>
+            </div>
+
+            <!-- Negative News Card -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-rose-500 shadow-sm hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">ข่าวไม่ดี (Negative)</p>
+                        <h3 id="kpiBad" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-face-frown"></i>
+                    </div>
+                </div>
+                <p id="kpiBadPercent" class="text-xs text-rose-600 font-medium mt-2">0% จากทั้งหมด</p>
+            </div>
+
+            <!-- Neutral News Card -->
+            <div class="glass-card rounded-2xl p-4 border-l-4 border-l-slate-400 shadow-sm hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500">ข่าวทั่วไป (Neutral)</p>
+                        <h3 id="kpiNeutral" class="text-2xl font-bold text-slate-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-face-meh"></i>
+                    </div>
+                </div>
+                <p id="kpiNeutralPercent" class="text-xs text-slate-500 font-medium mt-2">0% จากทั้งหมด</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Sentiment Distribution Chart -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm lg:col-span-1 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-thailife-blue"></i>
+                        สัดส่วนมุมมองข่าวสาร
+                    </h3>
+                </div>
+                <div class="relative flex-grow flex items-center justify-center min-h-[220px]">
+                    <canvas id="donutChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Timeline Trend Chart -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm lg:col-span-2 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-thailife-blue"></i>
+                        แนวโน้มข่าวสารตามช่วงเวลา
+                    </h3>
+                </div>
+                <div class="relative flex-grow min-h-[220px]">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- News Table Section -->
+        <div class="glass-card rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+            <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-thailife-blue"></i>
+                        รายการข่าวสรุป "ไทยประกันชีวิต"
+                    </h3>
+                    <p class="text-xs text-slate-500">แสดงข้อมูลล่าสุดที่ผ่านการกรอกและวิเคราะห์แล้ว</p>
+                </div>
+                <span id="recordCount" class="text-xs font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
+                    พบ 0 รายการ
+                </span>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-500 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                            <th class="py-3.5 px-4 w-28">วันที่</th>
+                            <th class="py-3.5 px-4 w-32">มุมมองข่าว</th>
+                            <th class="py-3.5 px-4">หัวข้อข่าว</th>
+                            <th class="py-3.5 px-4 w-28 text-center">ลิงก์ต้นทาง</th>
+                        </tr>
+                    </thead>
+                    <tbody id="newsTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden py-12 text-center text-slate-400">
+                <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                <p class="text-sm">ไม่พบข้อมูลข่าวสารในช่วงเวลาที่เลือก</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            &copy; 2026 บริษัท ไทยประกันชีวิต จำกัด (มหาชน) | News Intelligence Dashboard
+        </div>
+    </footer>
+
+    <!-- Google Sheet Link Config Modal -->
+    <div id="sheetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-spreadsheet text-emerald-600"></i>
+                    ตั้งค่า Google Sheet ต้นทาง
+                </h3>
+                <button onclick="closeSheetModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-500">
+                ใส่อยู่ในรูปแบบ URL หรือ Sheet ID ของ Google Sheet (กรุณาเปิดสิทธิ์เป็น "ทุกคนที่มีลิงก์สามารถดูได้")
+            </p>
+            <div>
+                <label class="block text-xs font-medium text-slate-700 mb-1">Google Sheet URL หรือ ID</label>
+                <input type="text" id="sheetUrlInput" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-thailife-cyan focus:outline-none" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeSheetModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
+                <button onclick="saveSheetUrl()" class="px-4 py-2 text-xs font-medium bg-thailife-blue hover:bg-blue-600 text-white rounded-lg">บันทึก & โหลดข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload File Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-upload text-emerald-600"></i>
+                    อัปโหลดไฟล์ข่าวสาร (CSV / JSON)
+                </h3>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-thailife-cyan transition cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
+                <p class="text-xs text-slate-600 font-medium">คลิกเพื่อเลือกไฟล์ CSV หรือ JSON</p>
+                <p class="text-[10px] text-slate-400 mt-1">คอลัมน์: title, url, date, sentiment</p>
+                <input type="file" id="fileInput" accept=".csv,.json" class="hidden" onchange="handleFileUpload(event)">
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="downloadSampleCSV()" class="text-xs text-thailife-blue hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-download"></i> ดาวน์โหลด CSV ตัวอย่าง
+                </button>
+                <button onclick="closeUploadModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toastMsg">อัปเดตข้อมูลเรียบร้อย</span>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        // Default Google Sheet ID
+        const DEFAULT_SHEET_ID = '1VQSmcIgeEqw95m22S3zcJIYFl24ODxROeibK9Zocdz8';
+        let currentSheetId = localStorage.getItem('thailife_sheet_id') || DEFAULT_SHEET_ID;
+
+        // Backup Sample Data (Used only if network is offline or Sheet is restricted)
+        const defaultSampleData = [
+            {
+                title: "ไทยประกันชีวิต คว้า 2 รางวัล Insurance Asia Awards 2026 ตอกย้ำความเป็นเลิศด้านการพัฒนา บุคลากร สู่ นวัตกรรมบริการ",
+                url: "https://www.marketplus.in.th/content/detail.php?id=43556",
+                date: "2026-10-22",
+                sentiment: "good"
+            },
+            {
+                title: "ไทยประกันชีวิต ร่วมสนับสนุน APCD เพิ่มการสร้างอาชีพให้แก่บุคคลออทิสติกและกลุ่มเปราะบาง",
+                url: "https://www.matichon.co.th/economy/news_4502123",
+                date: "2026-10-22",
+                sentiment: "good"
+            },
+            {
+                title: "TLI เปิดผลการดำเนินงานครึ่งปีแรก 2569 สัดส่วนกำไรมั่นคง ยอดขายช่องทางดิจิทัลเติบโตตามเป้า",
+                url: "https://www.prachachat.net/finance/news-1632145",
+                date: "2026-10-22",
+                sentiment: "good"
+            },
+            {
+                title: "ไทยประกันชีวิต ผนึก เครือข่าย รพ.กว่า 800 แห่ง ดัน “iClaim” ยกระดับเคลมสุขภาพดิจิทัล",
+                url: "https://www.hfocus.org/content/2026/09/39371",
+                date: "2026-10-22",
+                sentiment: "good"
+            }
+        ];
+
+        // Raw Data Storage
+        let allNewsData = [];
+        let filteredNewsData = [];
+
+        // Chart Instances
+        let donutChart = null;
+        let barChart = null;
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            fetchSheetData();
+        });
+
+        // Extract Google Sheet ID from full URL or return ID
+        function extractSheetId(input) {
+            if (!input) return DEFAULT_SHEET_ID;
+            const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            return match ? match[1] : input.trim();
+        }
+
+        // Fetch Data from Google Sheet using JSONP (Bypasses CORS completely)
+        async function fetchSheetData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshIcon = document.getElementById('refreshIcon');
+            const sourceStatusText = document.getElementById('sourceStatusText');
+            const statusIndicator = document.getElementById('statusIndicator');
+
+            refreshIcon.classList.add('spin-anim');
+            refreshBtn.disabled = true;
+            sourceStatusText.innerText = 'กำลังดึงข้อมูล...';
+
+            try {
+                // Method 1: Try JSONP via Script Tag Injection (Cross-Origin Safe)
+                const parsedRows = await fetchSheetViaJsonp(currentSheetId);
+                if (parsedRows && parsedRows.length > 0) {
+                    processRawData(parsedRows);
+                    showToast('ดึงข้อมูลจาก Google Sheet สำเร็จ!', 'success');
+                    sourceStatusText.innerText = 'เชื่อมต่อ Google Sheet แล้ว';
+                    statusIndicator.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    document.getElementById('lastUpdated').innerText = `(อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')})`;
+                } else {
+                    throw new Error('ไม่พบข้อมูลใน Google Sheet');
+                }
+            } catch (jsonpErr) {
+                console.warn('JSONP Fetch failed, trying direct fetch:', jsonpErr);
+                // Method 2: Fallback CSV Fetch
+                try {
+                    const csvText = await fetchCsvDirect(currentSheetId);
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            if (results.data && results.data.length > 0) {
+                                processRawData(results.data);
+                                showToast('ดึงข้อมูลสำเร็จ (ผ่าน CSV)', 'success');
+                                sourceStatusText.innerText = 'เชื่อมต่อ Google Sheet แล้ว';
+                                statusIndicator.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                                document.getElementById('lastUpdated').innerText = `(อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')})`;
+                            } else {
+                                useFallbackData('ไม่พบคอลัมน์ข้อมูลใน Google Sheet');
+                            }
+                        },
+                        error: function() {
+                            useFallbackData('ไม่สามารถอ่านไฟล์ CSV ได้');
+                        }
+                    });
+                } catch (csvErr) {
+                    console.error('CSV Fetch failed:', csvErr);
+                    useFallbackData('กรุณาตรวจสอบการแชร์ Google Sheet');
+                }
+            } finally {
+                refreshIcon.classList.remove('spin-anim');
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // JSONP Implementation for Google Sheets GViz API
+        function fetchSheetViaJsonp(sheetId) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'gvizCallback_' + Math.floor(Math.random() * 1000000);
+                const timeout = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('Request timeout'));
+                }, 8000);
+
+                function cleanup() {
+                    clearTimeout(timeout);
+                    delete window[callbackName];
+                    const scriptEl = document.getElementById(callbackName);
+                    if (scriptEl && scriptEl.parentNode) {
+                        scriptEl.parentNode.removeChild(scriptEl);
+                    }
+                }
+
+                window[callbackName] = function(response) {
+                    cleanup();
+                    if (response && response.status === 'ok' && response.table) {
+                        const rows = parseGvizTable(response.table);
+                        resolve(rows);
+                    } else {
+                        reject(new Error(response?.errors?.[0]?.detailed_message || 'GViz Error'));
+                    }
+                };
+
+                const script = document.createElement('script');
+                script.id = callbackName;
+                script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&t=${Date.now()}`;
+                script.onerror = function() {
+                    cleanup();
+                    reject(new Error('Script tag injection failed'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Parse GViz Table Object
+        function parseGvizTable(table) {
+            if (!table.cols || !table.rows) return [];
+
+            const cols = table.cols.map(c => (c.label || c.id || '').toString().toLowerCase().trim());
+
+            let titleIdx = cols.findIndex(c => c.includes('title') || c.includes('หัวข้อ'));
+            let urlIdx = cols.findIndex(c => c.includes('url') || c.includes('link') || c.includes('ลิงก์'));
+            let dateIdx = cols.findIndex(c => c.includes('date') || c.includes('วันที่'));
+            let sentimentIdx = cols.findIndex(c => c.includes('sentiment') || c.includes('มุมมอง') || c.includes('ผล'));
+
+            if (titleIdx === -1) titleIdx = 0;
+            if (urlIdx === -1) urlIdx = 1;
+            if (dateIdx === -1) dateIdx = 2;
+            if (sentimentIdx === -1) sentimentIdx = 3;
+
+            return table.rows.map(row => {
+                const c = row.c || [];
+                const getVal = (idx) => {
+                    if (!c[idx]) return '';
+                    if (c[idx].f !== undefined && c[idx].f !== null) return c[idx].f;
+                    if (c[idx].v !== undefined && c[idx].v !== null) return c[idx].v;
+                    return '';
+                };
+
+                return {
+                    title: getVal(titleIdx),
+                    url: getVal(urlIdx),
+                    date: getVal(dateIdx),
+                    sentiment: getVal(sentimentIdx)
+                };
+            });
+        }
+
+        function fetchCsvDirect(sheetId) {
+            return new Promise((resolve, reject) => {
+                fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&t=${Date.now()}`)
+                    .then(res => {
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        return res.text();
+                    })
+                    .then(resolve)
+                    .catch(reject);
+            });
+        }
+
+        function useFallbackData(reason) {
+            processRawData(defaultSampleData);
+            showToast(`${reason} - แสดงข้อมูลสำรองในระบบ`, 'error');
+            document.getElementById('sourceStatusText').innerText = 'ใช้งานข้อมูลสำรองในระบบ';
+            document.getElementById('statusIndicator').className = 'w-2 h-2 rounded-full bg-amber-400';
+            document.getElementById('lastUpdated').innerText = `(อัปเดตล่าสุด: ${new Date().toLocaleTimeString('th-TH')})`;
+        }
+
+        // Normalize and Process Raw Rows
+        function processRawData(rows) {
+            allNewsData = rows.map((row, index) => {
+                // Parse date (Handles DD/MM/YYYY or YYYY-MM-DD)
+                let dateStr = row.date || row.Date || row.DATE || '';
+                let formattedDate = formatDateStandard(dateStr);
+
+                // Sentiment mapping
+                let rawSentiment = (row.sentiment || row.Sentiment || 'neutral').toString().toLowerCase().trim();
+                let sentiment = 'neutral';
+                if (['good', 'positive', 'ข่าวดี', 'ดี'].includes(rawSentiment)) {
+                    sentiment = 'good';
+                } else if (['bad', 'negative', 'ข่าวไม่ดี', 'ไม่ดี'].includes(rawSentiment)) {
+                    sentiment = 'bad';
+                }
+
+                return {
+                    id: index + 1,
+                    title: row.title || row.Title || 'ไม่มีหัวข้อข่าว',
+                    url: row.url || row.Url || row.URL || '#',
+                    date: formattedDate,
+                    sentiment: sentiment
+                };
+            }).filter(item => item.title !== 'ไม่มีหัวข้อข่าว' && item.date);
+
+            // Sort newest first
+            allNewsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            applyFilters();
+        }
+
+        // Standardize Date format to YYYY-MM-DD
+        function formatDateStandard(str) {
+            if (!str) return new Date().toISOString().split('T')[0];
+            str = str.trim();
+            
+            // Format DD/MM/YYYY
+            if (str.includes('/')) {
+                const parts = str.split('/');
+                if (parts.length === 3) {
+                    let day = parts[0].padStart(2, '0');
+                    let month = parts[1].padStart(2, '0');
+                    let year = parts[2];
+                    if (year.length === 2) year = '20' + year;
+                    return `${year}-${month}-${day}`;
+                }
+            }
+            return str;
+        }
+
+        // Apply Filters (Date Range, Sentiment, Search Keyword)
+        function applyFilters() {
+            const startDateVal = document.getElementById('startDate').value;
+            const endDateVal = document.getElementById('endDate').value;
+            const sentimentVal = document.getElementById('sentimentFilter').value;
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            filteredNewsData = allNewsData.filter(item => {
+                // Date match
+                if (startDateVal && item.date < startDateVal) return false;
+                if (endDateVal && item.date > endDateVal) return false;
+
+                // Sentiment match
+                if (sentimentVal !== 'all' && item.sentiment !== sentimentVal) return false;
+
+                // Search keyword match
+                if (searchKeyword && !item.title.toLowerCase().includes(searchKeyword)) return false;
+
+                return true;
+            });
+
+            updateUI();
+        }
+
+        // Update Dashboard UI Elements
+        function updateUI() {
+            updateKPIs();
+            renderTable();
+            updateCharts();
+        }
+
+        // Calculate & Update KPIs
+        function updateKPIs() {
+            const total = filteredNewsData.length;
+            const good = filteredNewsData.filter(i => i.sentiment === 'good').length;
+            const bad = filteredNewsData.filter(i => i.sentiment === 'bad').length;
+            const neutral = filteredNewsData.filter(i => i.sentiment === 'neutral').length;
+
+            document.getElementById('kpiTotal').innerText = total.toLocaleString();
+            document.getElementById('kpiGood').innerText = good.toLocaleString();
+            document.getElementById('kpiBad').innerText = bad.toLocaleString();
+            document.getElementById('kpiNeutral').innerText = neutral.toLocaleString();
+
+            document.getElementById('kpiGoodPercent').innerText = total > 0 ? `${((good / total) * 100).toFixed(1)}% จากทั้งหมด` : '0%';
+            document.getElementById('kpiBadPercent').innerText = total > 0 ? `${((bad / total) * 100).toFixed(1)}% จากทั้งหมด` : '0%';
+            document.getElementById('kpiNeutralPercent').innerText = total > 0 ? `${((neutral / total) * 100).toFixed(1)}% จากทั้งหมด` : '0%';
+
+            document.getElementById('recordCount').innerText = `พบ ${total.toLocaleString()} รายการ`;
+        }
+
+        // Render News Table
+        function renderTable() {
+            const tbody = document.getElementById('newsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (filteredNewsData.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filteredNewsData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100';
+
+                // Format Date display
+                const dateParts = item.date.split('-');
+                const displayDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : item.date;
+
+                // Sentiment Badge
+                let badgeHTML = '';
+                if (item.sentiment === 'good') {
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2.5 py-1 rounded-full border border-emerald-200 font-medium"><i class="fa-solid fa-face-smile text-emerald-500"></i> ข่าวดี</span>`;
+                } else if (item.sentiment === 'bad') {
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-rose-50 text-rose-700 text-xs px-2.5 py-1 rounded-full border border-rose-200 font-medium"><i class="fa-solid fa-face-frown text-rose-500"></i> ข่าวไม่ดี</span>`;
+                } else {
+                    badgeHTML = `<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full border border-slate-200 font-medium"><i class="fa-solid fa-face-meh text-slate-400"></i> ข่าวทั่วไป</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-4 text-xs font-mono text-slate-500">${displayDate}</td>
+                    <td class="py-3.5 px-4">${badgeHTML}</td>
+                    <td class="py-3.5 px-4 font-medium text-slate-800 leading-snug">${escapeHTML(item.title)}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-thailife-blue hover:bg-thailife-blue hover:text-white transition">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Initialize Chart.js
+        function initCharts() {
+            // Donut Chart
+            const donutCtx = document.getElementById('donutChart').getContext('2d');
+            donutChart = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ข่าวดี', 'ข่าวไม่ดี', 'ข่าวทั่วไป'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#10B981', '#F43F5E', '#94A3B8'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Prompt', size: 12 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // Bar Chart
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'ข่าวดี', data: [], backgroundColor: '#10B981' },
+                        { label: 'ข่าวไม่ดี', data: [], backgroundColor: '#F43F5E' },
+                        { label: 'ข่าวทั่วไป', data: [], backgroundColor: '#94A3B8' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: 'Prompt', size: 12 } } }
+                    }
+                }
+            });
+        }
+
+        // Update Chart Data
+        function updateCharts() {
+            if (!donutChart || !barChart) return;
+
+            // Update Donut Chart
+            const good = filteredNewsData.filter(i => i.sentiment === 'good').length;
+            const bad = filteredNewsData.filter(i => i.sentiment === 'bad').length;
+            const neutral = filteredNewsData.filter(i => i.sentiment === 'neutral').length;
+
+            donutChart.data.datasets[0].data = [good, bad, neutral];
+            donutChart.update();
+
+            // Update Timeline Bar Chart (Group by Date)
+            const dateMap = {};
+            filteredNewsData.forEach(item => {
+                if (!dateMap[item.date]) {
+                    dateMap[item.date] = { good: 0, bad: 0, neutral: 0 };
+                }
+                dateMap[item.date][item.sentiment]++;
+            });
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const labels = sortedDates.map(d => {
+                const p = d.split('-');
+                return p.length === 3 ? `${p[2]}/${p[1]}` : d;
+            });
+
+            barChart.data.labels = labels;
+            barChart.data.datasets[0].data = sortedDates.map(d => dateMap[d].good);
+            barChart.data.datasets[1].data = sortedDates.map(d => dateMap[d].bad);
+            barChart.data.datasets[2].data = sortedDates.map(d => dateMap[d].neutral);
+            barChart.update();
+        }
+
+        // Quick Date Range Filter
+        function setDateRange(type) {
+            document.querySelectorAll('.range-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-thailife-navy', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            });
+            event.target.classList.add('active', 'bg-thailife-navy', 'text-white');
+            event.target.classList.remove('bg-slate-100', 'text-slate-700');
+
+            const today = new Date();
+            const formatDate = (d) => d.toISOString().split('T')[0];
+
+            if (type === 'all') {
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+            } else if (type === 'today') {
+                document.getElementById('startDate').value = formatDate(today);
+                document.getElementById('endDate').value = formatDate(today);
+            } else if (type === '7days') {
+                const past7 = new Date();
+                past7.setDate(today.getDate() - 7);
+                document.getElementById('startDate').value = formatDate(past7);
+                document.getElementById('endDate').value = formatDate(today);
+            } else if (type === '30days') {
+                const past30 = new Date();
+                past30.setDate(today.getDate() - 30);
+                document.getElementById('startDate').value = formatDate(past30);
+                document.getElementById('endDate').value = formatDate(today);
+            }
+
+            applyFilters();
+        }
+
+        // Sheet Modal Functions
+        function openSheetModal() {
+            document.getElementById('sheetUrlInput').value = currentSheetId;
+            document.getElementById('sheetModal').classList.remove('hidden');
+        }
+        function closeSheetModal() {
+            document.getElementById('sheetModal').classList.add('hidden');
+        }
+        function saveSheetUrl() {
+            const inputVal = document.getElementById('sheetUrlInput').value;
+            currentSheetId = extractSheetId(inputVal);
+            localStorage.setItem('thailife_sheet_id', currentSheetId);
+            closeSheetModal();
+            fetchSheetData();
+        }
+
+        // Upload Modal & File Handling
+        function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
+        function closeUploadModal() { document.getElementById('uploadModal').classList.add('hidden'); }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const content = evt.target.result;
+                if (file.name.endsWith('.csv')) {
+                    Papa.parse(content, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(res) {
+                            processRawData(res.data);
+                            closeUploadModal();
+                            showToast(`นำเข้าข้อมูลจาก CSV (${res.data.length} รายการ) เรียบร้อย`, 'success');
+                        }
+                    });
+                } else if (file.name.endsWith('.json')) {
+                    try {
+                        const parsed = JSON.parse(content);
+                        processRawData(Array.isArray(parsed) ? parsed : [parsed]);
+                        closeUploadModal();
+                        showToast('นำเข้าข้อมูลจาก JSON เรียบร้อย', 'success');
+                    } catch(err) {
+                        showToast('ไฟล์ JSON ไม่ถูกต้อง', 'error');
+                    }
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Download Sample CSV
+        function downloadSampleCSV() {
+            const csvContent = "data:text/csv;charset=utf-8,title,url,date,sentiment\n" +
+                "ไทยประกันชีวิต คว้า 2 รางวัลใหญ่ระดับเอเชีย,https://www.thailife.com,2026-10-22,good\n" +
+                "สรุปผลประกอบการไตรมาสล่าสุด TLI,https://www.thailife.com,2026-10-21,neutral\n";
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "thailife_news_template.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Toast Notification Helper
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = message;
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-base';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3500);
+        }
+
+        // HTML Escape Helper
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+</body>
+</html>
